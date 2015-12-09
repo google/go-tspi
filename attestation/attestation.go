@@ -14,7 +14,8 @@
 
 package attestation
 
-import ("bytes"
+import (
+	"bytes"
 	"crypto"
 	"crypto/aes"
 	"crypto/cipher"
