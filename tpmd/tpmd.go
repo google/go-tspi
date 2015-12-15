@@ -23,6 +23,7 @@ import (
 	"sync"
 
 	"github.com/coreos/go-tspi/attestation"
+	"github.com/coreos/go-tspi/tpmclient"
 	"github.com/coreos/go-tspi/tspi"
 )
 
@@ -52,12 +53,8 @@ func cleanupContext(context *tspi.Context) {
 	context.Close()
 }
 
-type ekcertResponse struct {
-	EKCert []byte
-}
-
 func getEkcert(rw http.ResponseWriter, request *http.Request) {
-	var output ekcertResponse
+	var output tpmclient.EkcertResponse
 
 	context, _, err := setupContext()
 	defer cleanupContext(context)
@@ -90,13 +87,8 @@ func getEkcert(rw http.ResponseWriter, request *http.Request) {
 	rw.Write(jsonresponse)
 }
 
-type aikResponse struct {
-	AIKBlob []byte
-	AIKPub  []byte
-}
-
 func generateAik(rw http.ResponseWriter, request *http.Request) {
-	var output aikResponse
+	var output tpmclient.AikResponse
 
 	context, _, err := setupContext()
 	defer cleanupContext(context)
@@ -125,20 +117,10 @@ func generateAik(rw http.ResponseWriter, request *http.Request) {
 	rw.Write(jsonresponse)
 }
 
-type challengeData struct {
-	AIK     []byte
-	Asymenc []byte
-	Symenc  []byte
-}
-
-type challengeResponse struct {
-	Response []byte
-}
-
 func aikChallenge(rw http.ResponseWriter, request *http.Request) {
 	body, err := ioutil.ReadAll(request.Body)
-	var input challengeData
-	var output challengeResponse
+	var input tpmclient.ChallengeData
+	var output tpmclient.ChallengeResponse
 
 	context, _, err := setupContext()
 	defer cleanupContext(context)
@@ -178,23 +160,10 @@ func aikChallenge(rw http.ResponseWriter, request *http.Request) {
 	rw.Write(jsonresponse)
 }
 
-type quoteData struct {
-	AIK   []byte
-	PCRs  []int
-	Nonce []byte
-}
-
-type quoteResponse struct {
-	Data       []byte
-	Validation []byte
-	PCRValues  [][]byte
-	Events     []tspi.Log
-}
-
 func quote(rw http.ResponseWriter, request *http.Request) {
 	body, err := ioutil.ReadAll(request.Body)
-	var input quoteData
-	var output quoteResponse
+	var input tpmclient.QuoteData
+	var output tpmclient.QuoteResponse
 
 	context, tpm, err := setupContext()
 	defer cleanupContext(context)
@@ -291,16 +260,9 @@ func quote(rw http.ResponseWriter, request *http.Request) {
 	rw.Write(jsonoutput)
 }
 
-type extendData struct {
-	Pcr       int
-	Eventtype int
-	Data      []byte
-	Event     string
-}
-
 func extend(rw http.ResponseWriter, request *http.Request) {
 	body, err := ioutil.ReadAll(request.Body)
-	var data extendData
+	var data tpmclient.ExtendInput
 
 	context, tpm, err := setupContext()
 	defer cleanupContext(context)
@@ -342,11 +304,11 @@ func main() {
 		return
 	}
 	socket := fmt.Sprintf(":%s", os.Args[1])
-	http.HandleFunc("/v1/extend", extend)
-	http.HandleFunc("/v1/quote", quote)
-	http.HandleFunc("/v1/getEkcert", getEkcert)
-	http.HandleFunc("/v1/generateAik", generateAik)
-	http.HandleFunc("/v1/aikChallenge", aikChallenge)
+	http.HandleFunc(tpmclient.ExtendURL, extend)
+	http.HandleFunc(tpmclient.QuoteURL, quote)
+	http.HandleFunc(tpmclient.GetEKCertURL, getEkcert)
+	http.HandleFunc(tpmclient.GenerateAikURL, generateAik)
+	http.HandleFunc(tpmclient.AikChallengeURL, aikChallenge)
 	err := http.ListenAndServe(socket, nil)
 	if err != nil {
 		fmt.Printf("Unable to listen - %s\n", err)
