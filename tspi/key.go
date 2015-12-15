@@ -73,3 +73,9 @@ func (key *Key) GetKeyBlob() ([]byte, error) {
 	return data, err
 }
 
+// GenerateKey generates a key pair on the TPM, wrapping it with the provided
+// key
+func (key *Key) GenerateKey(wrapkey *Key) (err error) {
+	err = tspiError(C.Tspi_Key_CreateKey((C.TSS_HKEY)(key.handle), (C.TSS_HKEY)(wrapkey.handle), 0))
+	return err
+}
