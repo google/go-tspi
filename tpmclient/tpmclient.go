@@ -39,6 +39,7 @@ const GetEKCertURL = "/v1/getEkcert"
 const ExtendURL = "/v1/extend"
 const QuoteURL = "/v1/quote"
 const GenerateAikURL = "/v1/generateAik"
+const GenerateKeyURL = "/v1/generateKey"
 const AikChallengeURL = "/v1/aikChallenge"
 
 func (client *TPMClient) get(endpoint string) (*http.Response, error) {
@@ -117,6 +118,36 @@ func (client *TPMClient) GenerateAIK() (aikpub []byte, aikblob []byte, err error
 	aikblob = aikData.AIKBlob
 
 	return aikpub, aikblob, nil
+}
+
+type KeyResponse struct {
+	KeyBlob	[]byte
+	KeyPub	[]byte
+}
+
+// GenerateKey requests that the TPM generate a new keypair
+func (client *TPMClient) GenerateKey() (aikpub []byte, aikblob []byte, err error) {
+	var keyData KeyResponse
+
+	keyresp, err := client.post(GenerateKeyURL, nil)
+	if err != nil {
+		return nil, nil, fmt.Errorf("Can't generate key: %s", err)
+	}
+	defer keyresp.Body.Close()
+	body, err := ioutil.ReadAll(keyresp.Body)
+	if err != nil {
+		return nil, nil, fmt.Errorf("Can't read key response: %s", err)
+	}
+
+	err = json.Unmarshal(body, &keyData)
+	if err != nil {
+		return nil, nil, fmt.Errorf("Can't parse key response: %s (%s)", err, body)
+	}
+
+	keypub := keyData.KeyPub
+	keyblob := keyData.KeyBlob
+
+	return keypub, keyblob, nil
 }
 
 type ChallengeData struct {

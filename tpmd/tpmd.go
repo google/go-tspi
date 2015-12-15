@@ -53,6 +53,21 @@ func cleanupContext(context *tspi.Context) {
 	context.Close()
 }
 
+func loadSRK(context *tspi.Context) (*tspi.Key, error) {
+	srk, err := context.LoadKeyByUUID(tspi.TSS_PS_TYPE_SYSTEM, tspi.TSS_UUID_SRK)
+	if err != nil {
+		return nil, err
+	}
+
+	srkpolicy, err := srk.GetPolicy(tspi.TSS_POLICY_USAGE)
+	if err != nil {
+		return nil, err
+	}
+	srkpolicy.SetSecret(tspi.TSS_SECRET_MODE_SHA1, wellKnown[:])
+
+	return srk, nil
+}
+
 func getEkcert(rw http.ResponseWriter, request *http.Request) {
 	var output tpmclient.EkcertResponse
 
@@ -107,6 +122,65 @@ func generateAik(rw http.ResponseWriter, request *http.Request) {
 
 	output.AIKPub = aikpub
 	output.AIKBlob = aikblob
+
+	jsonresponse, err := json.Marshal(output)
+	if err != nil {
+		rw.WriteHeader(http.StatusInternalServerError)
+		rw.Write([]byte(err.Error()))
+		return
+	}
+	rw.Write(jsonresponse)
+}
+
+func generateKey(rw http.ResponseWriter, request *http.Request) {
+	var output tpmclient.KeyResponse
+
+	if request.Method != "POST" {
+		rw.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	context, _, err := setupContext()
+	defer cleanupContext(context)
+
+	srk, err := loadSRK(context)
+
+	if err != nil {
+		rw.WriteHeader(http.StatusInternalServerError)
+		rw.Write([]byte(err.Error()))
+		return
+	}
+
+	key, err := context.CreateKey(tspi.TSS_KEY_TYPE_STORAGE | tspi.TSS_KEY_SIZE_2048)
+	if err != nil {
+		rw.WriteHeader(http.StatusInternalServerError)
+		rw.Write([]byte(err.Error()))
+		return
+	}
+
+	err = key.GenerateKey(srk)
+	if err != nil {
+		rw.WriteHeader(http.StatusInternalServerError)
+		rw.Write([]byte(err.Error()))
+		return
+	}
+
+	keypub, err := key.GetPubKeyBlob()
+	if err != nil {
+		rw.WriteHeader(http.StatusInternalServerError)
+		rw.Write([]byte(err.Error()))
+		return
+	}
+
+	keyblob, err := key.GetKeyBlob()
+	if err != nil {
+		rw.WriteHeader(http.StatusInternalServerError)
+		rw.Write([]byte(err.Error()))
+		return
+	}
+
+	output.KeyPub = keypub
+	output.KeyBlob = keyblob
 
 	jsonresponse, err := json.Marshal(output)
 	if err != nil {
@@ -308,6 +382,7 @@ func main() {
 	http.HandleFunc(tpmclient.QuoteURL, quote)
 	http.HandleFunc(tpmclient.GetEKCertURL, getEkcert)
 	http.HandleFunc(tpmclient.GenerateAikURL, generateAik)
+	http.HandleFunc(tpmclient.GenerateKeyURL, generateKey)
 	http.HandleFunc(tpmclient.AikChallengeURL, aikChallenge)
 	err := http.ListenAndServe(socket, nil)
 	if err != nil {
