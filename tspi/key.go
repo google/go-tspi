@@ -16,7 +16,10 @@ package tspi
 
 // #include <trousers/tss.h>
 import "C"
-import "unsafe"
+import (
+	"crypto/sha1"
+	"unsafe"
+)
 
 // ModulusFromBlob provides the modulus of a provided TSS key blob
 func ModulusFromBlob(blob []byte) []byte {
@@ -78,4 +81,26 @@ func (key *Key) GetKeyBlob() ([]byte, error) {
 func (key *Key) GenerateKey(wrapkey *Key) (err error) {
 	err = tspiError(C.Tspi_Key_CreateKey((C.TSS_HKEY)(key.handle), (C.TSS_HKEY)(wrapkey.handle), 0))
 	return err
+}
+
+// Certify signs the public key with another key held by the TPM
+func (key *Key) Certify(certifykey *Key, challenge []byte) ([]byte, []byte, error) {
+	var validation C.TSS_VALIDATION
+
+	challengeHash := sha1.Sum(challenge[:])
+	validation.ulExternalDataLength = sha1.Size
+	validation.rgbExternalData = (*C.BYTE)(&challengeHash[0])
+
+	err := tspiError(C.Tspi_Key_CertifyKey((C.TSS_HKEY)(key.handle), (C.TSS_HKEY)(certifykey.handle), &validation))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	data := C.GoBytes(unsafe.Pointer(validation.rgbData), (C.int)(validation.ulDataLength))
+	validationdata := C.GoBytes(unsafe.Pointer(validation.rgbValidationData), (C.int)(validation.ulValidationDataLength))
+
+	C.Tspi_Context_FreeMemory(key.context, validation.rgbData)
+	C.Tspi_Context_FreeMemory(key.context, validation.rgbValidationData)
+
+	return data, validationdata, nil
 }

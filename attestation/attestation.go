@@ -780,3 +780,43 @@ func QuoteVerify(data []byte, validation []byte, aikpub []byte, pcrvalues [][]by
 
 	return nil
 }
+
+// KeyVerify verifies that a key certification request was genuinely
+// provided by the TPM. It takes the certification data, certification
+// validation blob, the public half of the AIK, the public half of the key
+// to be certified and the nonce used in the original quote request. It then
+// verifies that the validation block is a valid signature for the
+// certification data, that the certification data matches the certified key
+// and that the secrets are the same (in order to avoid replay attacks). It
+// returns an error if any stage of the validation fails.
+func KeyVerify(data []byte, validation []byte, aikpub []byte, keypub []byte, secret []byte) error {
+	n := big.NewInt(0)
+	n.SetBytes(aikpub)
+	e := 65537
+
+	pKey := rsa.PublicKey{N: n, E: int(e)}
+
+	dataHash := sha1.Sum(data[:])
+
+	err := rsa.VerifyPKCS1v15(&pKey, crypto.SHA1, dataHash[:], validation)
+	if err != nil {
+		return err
+	}
+
+	keyHash := data[43:63]
+	nonceHash := data[63:83]
+
+	secretHash := sha1.Sum(secret[:])
+
+	if bytes.Equal(secretHash[:], nonceHash) == false {
+		return fmt.Errorf("Secret doesn't match")
+	}
+
+	certHash := sha1.Sum(keypub[:])
+
+	if bytes.Equal(certHash[:], keyHash) == false {
+		return fmt.Errorf("Key doesn't match")
+	}
+
+	return nil
+}
