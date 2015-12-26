@@ -133,10 +133,20 @@ func generateAik(rw http.ResponseWriter, request *http.Request) {
 }
 
 func generateKey(rw http.ResponseWriter, request *http.Request) {
+	var input tpmclient.KeyData
 	var output tpmclient.KeyResponse
+
+	body, err := ioutil.ReadAll(request.Body)
 
 	if request.Method != "POST" {
 		rw.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	err = json.Unmarshal(body, &input)
+	if err != nil {
+		rw.WriteHeader(http.StatusBadRequest)
+		rw.Write([]byte(err.Error()))
 		return
 	}
 
@@ -151,7 +161,7 @@ func generateKey(rw http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	key, err := context.CreateKey(tspi.TSS_KEY_TYPE_STORAGE | tspi.TSS_KEY_SIZE_2048)
+	key, err := context.CreateKey(input.KeyFlags)
 	if err != nil {
 		rw.WriteHeader(http.StatusInternalServerError)
 		rw.Write([]byte(err.Error()))

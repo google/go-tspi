@@ -120,16 +120,27 @@ func (client *TPMClient) GenerateAIK() (aikpub []byte, aikblob []byte, err error
 	return aikpub, aikblob, nil
 }
 
+type KeyData struct {
+	KeyFlags int
+}
+
 type KeyResponse struct {
 	KeyBlob	[]byte
 	KeyPub	[]byte
 }
 
 // GenerateKey requests that the TPM generate a new keypair
-func (client *TPMClient) GenerateKey() (aikpub []byte, aikblob []byte, err error) {
-	var keyData KeyResponse
+func (client *TPMClient) GenerateKey(flags int) (keypub []byte, keyblob []byte, err error) {
+	var keyData KeyData
+	var keyResponse KeyResponse
 
-	keyresp, err := client.post(GenerateKeyURL, nil)
+	keyData.KeyFlags = flags
+	request, err := json.Marshal(keyData)
+	if err != nil {
+		return nil, nil, fmt.Errorf("Can't construct request JSON: %s", err)
+	}
+
+	keyresp, err := client.post(GenerateKeyURL, bytes.NewBuffer(request))
 	if err != nil {
 		return nil, nil, fmt.Errorf("Can't generate key: %s", err)
 	}
@@ -139,13 +150,13 @@ func (client *TPMClient) GenerateKey() (aikpub []byte, aikblob []byte, err error
 		return nil, nil, fmt.Errorf("Can't read key response: %s", err)
 	}
 
-	err = json.Unmarshal(body, &keyData)
+	err = json.Unmarshal(body, &keyResponse)
 	if err != nil {
 		return nil, nil, fmt.Errorf("Can't parse key response: %s (%s)", err, body)
 	}
 
-	keypub := keyData.KeyPub
-	keyblob := keyData.KeyBlob
+	keypub = keyResponse.KeyPub
+	keyblob = keyResponse.KeyBlob
 
 	return keypub, keyblob, nil
 }
