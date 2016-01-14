@@ -24,8 +24,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/coreos/go-tspi/attestation"
-	"github.com/coreos/go-tspi/tspi"
+	"github.com/coreos/go-tspi/verification"
+	"github.com/coreos/go-tspi/tspiconst"
 )
 
 // TPMClient represents a connection to a system running a daemon providing
@@ -248,13 +248,13 @@ type QuoteResponse struct {
 	Data       []byte
 	Validation []byte
 	PCRValues  [][]byte
-	Events     []tspi.Log
+	Events     []tspiconst.Log
 }
 
 // GetQuote obtains a PCR quote from the TPM. It takes the aikpub Tspi Key, the
 // encrypted AIK blob and a list of PCRs as arguments. The response will
 // contain an array of PCR values, an array of log entries and any error.
-func (client *TPMClient) GetQuote(aikpub []byte, aikblob []byte, pcrs []int) (pcrvals [][]byte, log []tspi.Log, err error) {
+func (client *TPMClient) GetQuote(aikpub []byte, aikblob []byte, pcrs []int) (pcrvals [][]byte, log []tspiconst.Log, err error) {
 	var quoteRequest QuoteData
 	var response QuoteResponse
 
@@ -287,9 +287,9 @@ func (client *TPMClient) GetQuote(aikpub []byte, aikblob []byte, pcrs []int) (pc
 		return nil, nil, fmt.Errorf("Can't parse quote response: %s", err)
 	}
 
-	aikmod := tspi.ModulusFromBlob(aikpub)
+	aikmod := aikpub[28:]
 
-	err = attestation.QuoteVerify(response.Data, response.Validation, aikmod, response.PCRValues, nonce)
+	err = verification.QuoteVerify(response.Data, response.Validation, aikmod, response.PCRValues, nonce)
 
 	if err != nil {
 		return nil, nil, fmt.Errorf("Can't verify quote: %s", err)

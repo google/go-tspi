@@ -19,6 +19,8 @@ import "C"
 import (
 	"crypto/sha1"
 	"unsafe"
+
+	"github.com/coreos/go-tspi/tspiconst"
 )
 
 // TPM is a TSS TPM object
@@ -27,19 +29,9 @@ type TPM struct {
 	context C.TSS_HCONTEXT
 }
 
-// Log represents an entry from the TSS event log. Pcr is the register that
-// was extended by the event. Eventtype is the type of the event. PcrValue
-// is the value that was hashed into the TPM. Event is the raw event data.
-type Log struct {
-	Pcr       int
-	Eventtype int
-	PcrValue  []byte
-	Event     []byte
-}
-
 // GetEventLog returns an array of structures representing the contents of the
 // TSS event log
-func (tpm *TPM) GetEventLog() ([]Log, error) {
+func (tpm *TPM) GetEventLog() ([]tspiconst.Log, error) {
 	var count C.UINT32
 	var events *C.TSS_PCR_EVENT
 	var event C.TSS_PCR_EVENT
@@ -53,7 +45,7 @@ func (tpm *TPM) GetEventLog() ([]Log, error) {
 		return nil, nil
 	}
 
-	log := make([]Log, count)
+	log := make([]tspiconst.Log, count)
 	length := count * C.UINT32(unsafe.Sizeof(event))
 	slice := (*[1 << 30]C.TSS_PCR_EVENT)(unsafe.Pointer(events))[:length:length]
 

@@ -25,6 +25,7 @@ import (
 	"github.com/coreos/go-tspi/attestation"
 	"github.com/coreos/go-tspi/tpmclient"
 	"github.com/coreos/go-tspi/tspi"
+	"github.com/coreos/go-tspi/tspiconst"
 )
 
 var wellKnown [20]byte
@@ -39,12 +40,12 @@ func setupContext() (*tspi.Context, *tspi.TPM, error) {
 
 	context.Connect()
 	tpm := context.GetTPM()
-	tpmpolicy, err := context.CreatePolicy(tspi.TSS_POLICY_USAGE)
+	tpmpolicy, err := context.CreatePolicy(tspiconst.TSS_POLICY_USAGE)
 	if err != nil {
 		return nil, nil, err
 	}
 	tpm.AssignPolicy(tpmpolicy)
-	tpmpolicy.SetSecret(tspi.TSS_SECRET_MODE_SHA1, wellKnown[:])
+	tpmpolicy.SetSecret(tspiconst.TSS_SECRET_MODE_SHA1, wellKnown[:])
 
 	return context, tpm, nil
 }
@@ -54,16 +55,16 @@ func cleanupContext(context *tspi.Context) {
 }
 
 func loadSRK(context *tspi.Context) (*tspi.Key, error) {
-	srk, err := context.LoadKeyByUUID(tspi.TSS_PS_TYPE_SYSTEM, tspi.TSS_UUID_SRK)
+	srk, err := context.LoadKeyByUUID(tspiconst.TSS_PS_TYPE_SYSTEM, tspi.TSS_UUID_SRK)
 	if err != nil {
 		return nil, err
 	}
 
-	srkpolicy, err := srk.GetPolicy(tspi.TSS_POLICY_USAGE)
+	srkpolicy, err := srk.GetPolicy(tspiconst.TSS_POLICY_USAGE)
 	if err != nil {
 		return nil, err
 	}
-	srkpolicy.SetSecret(tspi.TSS_SECRET_MODE_SHA1, wellKnown[:])
+	srkpolicy.SetSecret(tspiconst.TSS_SECRET_MODE_SHA1, wellKnown[:])
 
 	return srk, nil
 }
@@ -270,7 +271,7 @@ func quote(rw http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	pcrs, err := context.CreatePCRs(tspi.TSS_PCRS_STRUCT_INFO)
+	pcrs, err := context.CreatePCRs(tspiconst.TSS_PCRS_STRUCT_INFO)
 	if err != nil {
 		rw.WriteHeader(http.StatusInternalServerError)
 		rw.Write([]byte(err.Error()))
@@ -284,19 +285,19 @@ func quote(rw http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	srk, err := context.LoadKeyByUUID(tspi.TSS_PS_TYPE_SYSTEM, tspi.TSS_UUID_SRK)
+	srk, err := context.LoadKeyByUUID(tspiconst.TSS_PS_TYPE_SYSTEM, tspi.TSS_UUID_SRK)
 	if err != nil {
 		rw.WriteHeader(http.StatusInternalServerError)
 		rw.Write([]byte(err.Error()))
 		return
 	}
-	srkpolicy, err := srk.GetPolicy(tspi.TSS_POLICY_USAGE)
+	srkpolicy, err := srk.GetPolicy(tspiconst.TSS_POLICY_USAGE)
 	if err != nil {
 		rw.WriteHeader(http.StatusInternalServerError)
 		rw.Write([]byte(err.Error()))
 		return
 	}
-	srkpolicy.SetSecret(tspi.TSS_SECRET_MODE_SHA1, wellKnown[:])
+	srkpolicy.SetSecret(tspiconst.TSS_SECRET_MODE_SHA1, wellKnown[:])
 
 	aik, err := context.LoadKeyByBlob(srk, input.AIK)
 	if err != nil {

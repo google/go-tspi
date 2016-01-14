@@ -19,14 +19,14 @@ tpm := context.GetTPM()
 // Obtain the TPM event log
 log, err := tpm.GetEventLog()
 ```
-## attestation
+## attestation and verification
 
 Helper functions for performing attestation-related tasks
 ```
 // Retrieve the EK certificate
 ekcert, err := attestation.GetEKCert(context)
 // Verify that the EK certificate is signed by a TPM vendor
-err = attestation.VerifyEKCert(ekcert)
+err = verification.VerifyEKCert(ekcert)
 if err != nil {
    log.Fatal("Unable to verify EK certificate!")
 }
