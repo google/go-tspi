@@ -43,7 +43,7 @@ const GenerateKeyURL = "/v1/generateKey"
 const AikChallengeURL = "/v1/aikChallenge"
 
 func (client *TPMClient) get(endpoint string) (*http.Response, error) {
-	url := fmt.Sprintf("http://%s/%s", client.host, endpoint)
+	url := fmt.Sprintf("http://%s%s", client.host, endpoint)
 	httpClient := &http.Client{
 		Timeout: client.timeout,
 	}
@@ -52,7 +52,7 @@ func (client *TPMClient) get(endpoint string) (*http.Response, error) {
 }
 
 func (client *TPMClient) post(endpoint string, data io.Reader) (*http.Response, error) {
-	url := fmt.Sprintf("http://%s/%s", client.host, endpoint)
+	url := fmt.Sprintf("http://%s%s", client.host, endpoint)
 	httpClient := &http.Client{
 		Timeout: client.timeout,
 	}
