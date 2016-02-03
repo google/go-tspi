@@ -531,8 +531,8 @@ const (
 // was extended by the event. Eventtype is the type of the event. PcrValue
 // is the value that was hashed into the TPM. Event is the raw event data.
 type Log struct {
-	Pcr       int
-	Eventtype int
-	PcrValue  []byte
+	Pcr       int32
+	Eventtype int32
+	PcrValue  [20]byte
 	Event     []byte
 }

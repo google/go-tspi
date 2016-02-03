@@ -17,7 +17,11 @@ package tspi
 // #include <trousers/tss.h>
 import "C"
 import (
+	"bufio"
 	"crypto/sha1"
+	"encoding/binary"
+	"io"
+	"os"
 	"unsafe"
 
 	"github.com/coreos/go-tspi/tspiconst"
@@ -35,25 +39,65 @@ func (tpm *TPM) GetEventLog() ([]tspiconst.Log, error) {
 	var count C.UINT32
 	var events *C.TSS_PCR_EVENT
 	var event C.TSS_PCR_EVENT
+	var log []tspiconst.Log
 
-	err := tspiError(C.Tspi_TPM_GetEventLog(tpm.handle, &count, &events))
+	f, err := os.Open("/sys/kernel/security/tpm0/binary_bios_measurements")
+	if err != nil {
+		return nil, err
+	}
+
+	firmware_events := bufio.NewReader(f)
+
+	for {
+		var entry tspiconst.Log
+		var datalen int32
+		err := binary.Read(firmware_events, binary.LittleEndian, &entry.Pcr)
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return nil, err
+		}
+		err = binary.Read(firmware_events, binary.LittleEndian, &entry.Eventtype)
+		if err != nil {
+			return nil, err
+		}
+		err = binary.Read(firmware_events, binary.LittleEndian, &entry.PcrValue)
+		if err != nil {
+			return nil, err
+		}
+		err = binary.Read(firmware_events, binary.LittleEndian, &datalen)
+		if err != nil {
+			return nil, err
+		}
+		data := make([]byte, datalen)
+		err = binary.Read(firmware_events, binary.LittleEndian, &data)
+		if err != nil {
+			return nil, err
+		}
+		entry.Event = data[:]
+		log = append(log, entry)
+	}
+
+	err = tspiError(C.Tspi_TPM_GetEventLog(tpm.handle, &count, &events))
 	if err != nil {
 		return nil, err
 	}
 
 	if count == 0 {
-		return nil, nil
+		return log, nil
 	}
 
-	log := make([]tspiconst.Log, count)
 	length := count * C.UINT32(unsafe.Sizeof(event))
 	slice := (*[1 << 30]C.TSS_PCR_EVENT)(unsafe.Pointer(events))[:length:length]
 
 	for i := 0; i < int(count); i++ {
-		log[i].Pcr = int(slice[i].ulPcrIndex)
-		log[i].Eventtype = int(slice[i].eventType)
-		log[i].PcrValue = C.GoBytes(unsafe.Pointer(slice[i].rgbPcrValue), C.int(slice[i].ulPcrValueLength))
-		log[i].Event = C.GoBytes(unsafe.Pointer(slice[i].rgbEvent), C.int(slice[i].ulEventLength))
+		var entry tspiconst.Log
+		entry.Pcr = int32(slice[i].ulPcrIndex)
+		entry.Eventtype = int32(slice[i].eventType)
+		copy(entry.PcrValue[:],C.GoBytes(unsafe.Pointer(slice[i].rgbPcrValue), C.int(slice[i].ulPcrValueLength)))
+		entry.Event = C.GoBytes(unsafe.Pointer(slice[i].rgbEvent), C.int(slice[i].ulEventLength))
+		log = append(log, entry)
 	}
 	C.Tspi_Context_FreeMemory(tpm.context, (*C.BYTE)(unsafe.Pointer(events)))
 	return log, nil
