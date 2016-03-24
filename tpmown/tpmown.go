@@ -67,7 +67,7 @@ func main () {
 		err = tpm.TakeOwnership(srk)
 
 		if err != nil {
-			log.Fatalf("Unable to take ownership of TPM")
+			log.Fatalf("Unable to take ownership of TPM: %v", err)
 		}
 	}
 
