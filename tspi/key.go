@@ -103,7 +103,7 @@ func (key *Key) Bind(data []byte) ([]byte, error) {
 }
 
 // Unbind decrypts data previously encrypted with this key
-func (key *Key) Unbind(data []byte) ([]byte, error)  {
+func (key *Key) Unbind(data []byte) ([]byte, error) {
 	var encdata C.TSS_HENCDATA
 	var dataLen C.UINT32
 	var cData *C.BYTE
@@ -138,7 +138,7 @@ func (key *Key) Seal(data []byte, pcrs *PCRs) ([]byte, error) {
 	var cData *C.BYTE
 	var pcrhandle C.TSS_HPCRS
 
-	if (pcrs != nil) {
+	if pcrs != nil {
 		pcrhandle = pcrs.handle
 	}
 
@@ -164,7 +164,7 @@ func (key *Key) Seal(data []byte, pcrs *PCRs) ([]byte, error) {
 
 // Unseal decrypts data previously encrypted with this key as long as the
 // PCR values match those the data was sealed against
-func (key *Key) Unseal(data []byte) ([]byte, error)  {
+func (key *Key) Unseal(data []byte) ([]byte, error) {
 	var encdata C.TSS_HENCDATA
 	var dataLen C.UINT32
 	var cData *C.BYTE

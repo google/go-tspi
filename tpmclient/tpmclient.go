@@ -24,8 +24,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/coreos/go-tspi/verification"
 	"github.com/coreos/go-tspi/tspiconst"
+	"github.com/coreos/go-tspi/verification"
 )
 
 // TPMClient represents a connection to a system running a daemon providing
@@ -35,12 +35,14 @@ type TPMClient struct {
 	timeout time.Duration
 }
 
-const GetEKCertURL = "/v1/getEkcert"
-const ExtendURL = "/v1/extend"
-const QuoteURL = "/v1/quote"
-const GenerateAikURL = "/v1/generateAik"
-const GenerateKeyURL = "/v1/generateKey"
-const AikChallengeURL = "/v1/aikChallenge"
+const (
+	GetEKCertURL    = "/v1/getEkcert"
+	ExtendURL       = "/v1/extend"
+	QuoteURL        = "/v1/quote"
+	GenerateAikURL  = "/v1/generateAik"
+	GenerateKeyURL  = "/v1/generateKey"
+	AikChallengeURL = "/v1/aikChallenge"
+)
 
 func (client *TPMClient) get(endpoint string) (*http.Response, error) {
 	url := fmt.Sprintf("http://%s%s", client.host, endpoint)
@@ -125,8 +127,8 @@ type KeyData struct {
 }
 
 type KeyResponse struct {
-	KeyBlob	[]byte
-	KeyPub	[]byte
+	KeyBlob []byte
+	KeyPub  []byte
 }
 
 // GenerateKey requests that the TPM generate a new keypair
