@@ -95,7 +95,7 @@ func (tpm *TPM) GetEventLog() ([]tspiconst.Log, error) {
 		var entry tspiconst.Log
 		entry.Pcr = int32(slice[i].ulPcrIndex)
 		entry.Eventtype = int32(slice[i].eventType)
-		copy(entry.PcrValue[:],C.GoBytes(unsafe.Pointer(slice[i].rgbPcrValue), C.int(slice[i].ulPcrValueLength)))
+		copy(entry.PcrValue[:], C.GoBytes(unsafe.Pointer(slice[i].rgbPcrValue), C.int(slice[i].ulPcrValueLength)))
 		entry.Event = C.GoBytes(unsafe.Pointer(slice[i].rgbEvent), C.int(slice[i].ulEventLength))
 		log = append(log, entry)
 	}
@@ -206,7 +206,6 @@ func (tpm *TPM) TakeOwnership(srk *Key) error {
 	err := tspiError(C.Tspi_TPM_TakeOwnership(tpm.handle, srk.handle, 0))
 	return err
 }
-
 
 // AssignPolicy assigns a TSS policy to the TPM.
 func (tpm *TPM) AssignPolicy(policy *Policy) error {
