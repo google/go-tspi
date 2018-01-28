@@ -16,7 +16,11 @@ package tspi
 
 // #include <trousers/tss.h>
 import "C"
-import "unsafe"
+
+import (
+	"crypto"
+	"unsafe"
+)
 
 // Context is a TSS context
 type Context struct {
@@ -104,4 +108,27 @@ func (context *Context) CreatePCRs(flags int) (*PCRs, error) {
 	var handle C.TSS_HPCRS
 	err := tspiError(C.Tspi_Context_CreateObject(context.context, C.TSS_OBJECT_TYPE_PCRS, (C.TSS_FLAG)(flags), (*C.TSS_HOBJECT)(&handle)))
 	return &PCRs{handle: handle, context: context.context}, err
+}
+
+// CreateHash creates a Hash object for the given hash algorithm. If using an algorithm other than crypto.SHA1 and
+// if you are signing with this hash then make sure the key is created with signing algorithm TSS_SS_RSASSAPKCS1V15_DER.
+func (context *Context) CreateHash(hash crypto.Hash) (*Hash, error) {
+	var hashAlg C.TSS_FLAG
+	if hash == crypto.SHA1 {
+		hashAlg = C.TSS_HASH_SHA1
+	} else {
+		hashAlg = C.TSS_HASH_OTHER
+	}
+
+	var handle C.TSS_HHASH
+	err := tspiError(C.Tspi_Context_CreateObject(context.context, C.TSS_OBJECT_TYPE_HASH, hashAlg, (*C.TSS_HOBJECT)(&handle)))
+	if err != nil {
+		return nil, err
+	}
+
+	return &Hash{
+		context: context.context,
+		handle:  handle,
+		hashAlg: hash,
+	}, nil
 }
