@@ -11,7 +11,8 @@ control interface. It consists of the following components:
 The tspi bindings for Go. These are a low-level interface intended for use by
 people writing new TPM-using applications in Go. Code using these bindings must
 run on the same system as the TPM. For example:
-```
+
+```go
 // Create a new TSPI context
 context, err := tspi.NewContext()
 // Connect to the TPM daemon
@@ -24,7 +25,8 @@ log, err := tpm.GetEventLog()
 ## attestation and verification
 
 Helper functions for performing attestation-related tasks
-```
+
+```go
 // Retrieve the EK certificate
 ekcert, err := attestation.GetEKCert(context)
 // Verify that the EK certificate is signed by a TPM vendor
@@ -43,7 +45,8 @@ network. Takes the listening port number as the only argument.
 Library for client applications communicating with tpmd. Avoids the need for
 individual applications to care about TSPI context or resource lifecycles
 themselves.
-```
+
+```go
 `// Connect to the TPM daemon on localhost port 12401
 client := tpmclient.New("127.0.0.1:12401")
 // Extend a PCR with some data
