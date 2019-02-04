@@ -1,6 +1,6 @@
 # go-tspi - Go bindings and support code for libtspi and tpm communication
 
-[![Build Status (Travis)](https://travis-ci.org/coreos/go-tspi.svg?branch=master)](https://travis-ci.org/coreos/go-tspi)
+[![Build Status (Travis)](https://travis-ci.org/google/go-tspi.svg?branch=master)](https://travis-ci.org/google/go-tspi)
 
 This is a library providing a set of bindings for communication between
 code written in Go and libtspi, the library responsible for providing a TPM
