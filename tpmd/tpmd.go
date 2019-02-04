@@ -22,10 +22,10 @@ import (
 	"os"
 	"sync"
 
-	"github.com/coreos/go-tspi/attestation"
-	"github.com/coreos/go-tspi/tpmclient"
-	"github.com/coreos/go-tspi/tspi"
-	"github.com/coreos/go-tspi/tspiconst"
+	"github.com/google/go-tspi/attestation"
+	"github.com/google/go-tspi/tpmclient"
+	"github.com/google/go-tspi/tspi"
+	"github.com/google/go-tspi/tspiconst"
 )
 
 var wellKnown [20]byte

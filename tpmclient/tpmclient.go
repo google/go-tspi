@@ -24,8 +24,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/coreos/go-tspi/tspiconst"
-	"github.com/coreos/go-tspi/verification"
+	"github.com/google/go-tspi/tspiconst"
+	"github.com/google/go-tspi/verification"
 )
 
 // TPMClient represents a connection to a system running a daemon providing

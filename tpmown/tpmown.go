@@ -7,8 +7,8 @@ import (
 	"os"
 	"os/exec"
 
-	"github.com/coreos/go-tspi/tspi"
-	"github.com/coreos/go-tspi/tspiconst"
+	"github.com/google/go-tspi/tspi"
+	"github.com/google/go-tspi/tspiconst"
 )
 
 var wellKnown [20]byte

@@ -29,7 +29,7 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/coreos/go-tspi/tspiconst"
+	"github.com/google/go-tspi/tspiconst"
 )
 
 func pad(plaintext []byte, bsize int) ([]byte, error) {
