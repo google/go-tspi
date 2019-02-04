@@ -24,7 +24,7 @@ import (
 	"os"
 	"unsafe"
 
-	"github.com/coreos/go-tspi/tspiconst"
+	"github.com/google/go-tspi/tspiconst"
 )
 
 // TPM is a TSS TPM object

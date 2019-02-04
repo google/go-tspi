@@ -18,8 +18,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/coreos/go-tspi/tspi"
-	"github.com/coreos/go-tspi/tspiconst"
+	"github.com/google/go-tspi/tspi"
+	"github.com/google/go-tspi/tspiconst"
 )
 
 func pad(plaintext []byte, bsize int) ([]byte, error) {
