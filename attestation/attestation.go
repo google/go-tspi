@@ -164,11 +164,11 @@ func GetEKCert(context *tspi.Context) (ekcert []byte, err error) {
 
 	tag := (uint)((uint)(data[0])<<8 | (uint)(data[1]))
 	if tag != 0x1001 {
-		return nil, fmt.Errorf("Invalid tag: %x", tag)
+		return nil, fmt.Errorf("invalid tag: %x", tag)
 	}
 
 	if data[2] != 0 {
-		return nil, fmt.Errorf("Invalid certificate")
+		return nil, fmt.Errorf("invalid certificate")
 	}
 
 	ekbuflen := (uint)(uint(data[3])<<8 | (uint)(data[4]))
@@ -181,7 +181,7 @@ func GetEKCert(context *tspi.Context) (ekcert []byte, err error) {
 		offset += 2
 		ekbuflen -= 2
 	} else if data[0] != 0x30 {
-		return nil, fmt.Errorf("Invalid header: %x\n", tag)
+		return nil, fmt.Errorf("invalid header: %x", tag)
 	}
 
 	ekoffset := (uint)(0)

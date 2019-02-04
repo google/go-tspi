@@ -64,7 +64,7 @@ func (hash *Hash) SetValue(hashed []byte) error {
 	} else {
 		prefix, ok := hashPrefixes[hash.hashAlg]
 		if !ok {
-			return errors.New("Unsupported hash algorithm.")
+			return errors.New("unsupported hash algorithm")
 		}
 		data = append(prefix, hashed...)
 	}

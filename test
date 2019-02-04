@@ -36,4 +36,13 @@ if [ -n "${fmtRes}" ]; then
 	exit 255
 fi
 
+echo "Checking golint..."
+# tpmclient and tspiconst declare C style constants and don't pass golint. For
+# now ignore them.
+golint -set_exit_status \
+  ./attestation \
+  ./tpmd \
+  ./tpmown \
+  ./verification
+
 echo "Success"

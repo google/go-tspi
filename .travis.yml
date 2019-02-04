@@ -7,4 +7,5 @@ go:
 install: true
 
 script:
+  - go get golang.org/x/lint/golint
   - ./test
