@@ -17,7 +17,10 @@ package tspi
 // #include <trousers/tss.h>
 import "C"
 import (
+	"crypto/rsa"
 	"crypto/sha1"
+	"errors"
+	"math/big"
 	"unsafe"
 )
 
@@ -43,6 +46,43 @@ func (key *Key) GetPolicy(poltype int) (*Policy, error) {
 func (key *Key) SetModulus(n []byte) error {
 	err := tspiError(C.Tspi_SetAttribData((C.TSS_HOBJECT)(key.handle), C.TSS_TSPATTRIB_RSAKEY_INFO, C.TSS_TSPATTRIB_KEYINFO_RSA_MODULUS, (C.UINT32)(len(n)), (*C.BYTE)(unsafe.Pointer(&n[0]))))
 	return err
+}
+
+// GetExponent returns the exponent of the public key
+func (key *Key) GetExponent() (uint32, error) {
+	var dataLen C.UINT32
+	var cData *C.BYTE
+	err := tspiError(C.Tspi_GetAttribData((C.TSS_HOBJECT)(key.handle), C.TSS_TSPATTRIB_RSAKEY_INFO, C.TSS_TSPATTRIB_KEYINFO_RSA_EXPONENT, &dataLen, &cData))
+	data := C.GoBytes(unsafe.Pointer(cData), (C.int)(dataLen))
+	C.Tspi_Context_FreeMemory(key.context, cData)
+	if err != nil {
+		return 0, err
+	}
+	if len(data) > 4 {
+		return 0, errors.New("Exponent doesn't fit in int")
+	}
+	var exponent uint32
+	for _, b := range data {
+		exponent = (exponent << 8) + uint32(b)
+	}
+	return exponent, nil
+}
+
+// GetPublicKey returns a go-native *rsa.PublicKey instance of this key's public key
+func (key *Key) GetPublicKey() (*rsa.PublicKey, error) {
+	modulus, err := key.GetModulus()
+	if err != nil {
+		return nil, err
+	}
+	exponent, err := key.GetExponent()
+	if err != nil {
+		return nil, err
+	}
+	pk := &rsa.PublicKey{
+		N: new(big.Int).SetBytes(modulus),
+		E: int(exponent),
+	}
+	return pk, nil
 }
 
 // GetModulus returns the modulus of the public key
@@ -189,6 +229,12 @@ func (key *Key) Unseal(data []byte) ([]byte, error) {
 	return blob, nil
 }
 
+// SetSignatureScheme sets the signature scheme on a newly created key. The scheme parameter should be one of tspiconst.TSS_SS_RSASSAPKCS1V15_SHA1
+// or tspiconst.TSS_SS_RSASSAPKCS1V15_DER
+func (key *Key) SetSignatureScheme(scheme int) error {
+	return tspiError(C.Tspi_SetAttribUint32((C.TSS_HOBJECT)(key.handle), C.TSS_TSPATTRIB_KEY_INFO, C.TSS_TSPATTRIB_KEYINFO_SIGSCHEME, (C.UINT32)(scheme)))
+}
+
 // GenerateKey generates a key pair on the TPM, wrapping it with the provided
 // key
 func (key *Key) GenerateKey(wrapkey *Key) (err error) {
@@ -216,4 +262,10 @@ func (key *Key) Certify(certifykey *Key, challenge []byte) ([]byte, []byte, erro
 	C.Tspi_Context_FreeMemory(key.context, validation.rgbValidationData)
 
 	return data, validationdata, nil
+}
+
+// AssignPolicy assigns a TSS policy to the key.
+func (key *Key) AssignPolicy(policy *Policy) error {
+	err := tspiError(C.Tspi_Policy_AssignToObject(policy.handle, (C.TSS_HOBJECT)(key.handle)))
+	return err
 }
