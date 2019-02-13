@@ -269,3 +269,9 @@ func (key *Key) AssignPolicy(policy *Policy) error {
 	err := tspiError(C.Tspi_Policy_AssignToObject(policy.handle, (C.TSS_HOBJECT)(key.handle)))
 	return err
 }
+
+// Close closes the Key object.
+func (key *Key) Close() error {
+	err := tspiError(C.Tspi_Context_CloseObject(key.context, key.handle))
+	return err
+}

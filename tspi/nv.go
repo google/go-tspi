@@ -42,3 +42,9 @@ func (nv *NV) AssignPolicy(policy *Policy) error {
 	err := tspiError(C.Tspi_Policy_AssignToObject(policy.handle, (C.TSS_HOBJECT)(nv.handle)))
 	return err
 }
+
+// Close closes the NV object.
+func (nv *NV) Close() error {
+	err := tspiError(C.Tspi_Context_CloseObject(nv.context, nv.handle))
+	return err
+}

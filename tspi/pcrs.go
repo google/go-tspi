@@ -59,3 +59,9 @@ func (pcrs *PCRs) GetPCRValues() ([][]byte, error) {
 	}
 	return pcrs.pcrs[:], nil
 }
+
+// Close closes the PCRs object.
+func (pcrs *PCRs) Close() error {
+	err := tspiError(C.Tspi_Context_CloseObject(pcrs.context, pcrs.handle))
+	return err
+}

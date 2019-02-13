@@ -29,3 +29,9 @@ func (policy *Policy) SetSecret(sectype int, secret []byte) error {
 	err := tspiError(C.Tspi_Policy_SetSecret(policy.handle, (C.TSS_FLAG)(sectype), (C.UINT32)(len(secret)), (*C.BYTE)(&secret[0])))
 	return err
 }
+
+// Close closes the Policy object.
+func (policy *Policy) Close() error {
+	err := tspiError(C.Tspi_Context_CloseObject(policy.context, policy.handle))
+	return err
+}
