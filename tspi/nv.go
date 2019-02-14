@@ -26,8 +26,13 @@ type NV struct {
 
 // ReadValue reads length bytes from offset in the TPM NVRAM space
 func (nv *NV) ReadValue(offset uint, length uint) ([]byte, error) {
-	data := make([]byte, length)
-	err := tspiError(C.Tspi_NV_ReadValue(nv.handle, (C.UINT32)(offset), (*C.UINT32)(unsafe.Pointer(&length)), (**C.BYTE)(unsafe.Pointer(&data))))
+	var cdata *C.BYTE
+	defer C.Tspi_Context_FreeMemory(nv.context, cdata)
+	err := tspiError(C.Tspi_NV_ReadValue(nv.handle, (C.UINT32)(offset), (*C.UINT32)(unsafe.Pointer(&length)), &cdata))
+	if err != nil {
+		return nil, err
+	}
+	data := C.GoBytes(unsafe.Pointer(cdata), C.int(length))
 	return data, err
 }
 
