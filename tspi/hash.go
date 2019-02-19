@@ -86,3 +86,9 @@ func (hash *Hash) Sign(key *Key) ([]byte, error) {
 
 	return data, nil
 }
+
+// Close closes the Hash object.
+func (hash *Hash) Close() error {
+	err := tspiError(C.Tspi_Context_CloseObject(hash.context, hash.handle))
+	return err
+}

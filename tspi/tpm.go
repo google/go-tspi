@@ -222,3 +222,9 @@ func (tpm *TPM) CollateIdentityRequest(srk *Key, pubkey *Key, aik *Key) ([]byte,
 	C.Tspi_Context_FreeMemory(tpm.context, cCertReq)
 	return certReq, err
 }
+
+// Close closes the TPM object.
+func (tpm *TPM) Close() error {
+	err := tspiError(C.Tspi_Context_CloseObject(tpm.context, tpm.handle))
+	return err
+}
