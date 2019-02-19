@@ -134,6 +134,8 @@ func (context *Context) CreateHash(hash crypto.Hash) (*Hash, error) {
 }
 
 // GetCapability reads the requested capability and subcapability from the TPM.
+// A list of capabilities and subcapabilities can be found under tspiconst/tpsiconst.
+// For usage information see Section 21.1 of the TPM1.2 main specification-part2.
 func (context *Context) GetCapability(capa int, subcaplen uint, subcap uint8) ([]byte, error) {
 	var resplen C.uint
 	var resp *C.BYTE
