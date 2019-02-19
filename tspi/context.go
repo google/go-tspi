@@ -132,3 +132,11 @@ func (context *Context) CreateHash(hash crypto.Hash) (*Hash, error) {
 		hashAlg: hash,
 	}, nil
 }
+
+// GetCapability reads the requested capability and subcapability from the TPM.
+func (context *Context) GetCapability(capa int, subcaplen uint, subcap uint8) ([]byte, error) {
+	var resplen C.uint
+	var resp *C.BYTE
+	err := tspiError(C.Tspi_TPM_GetCapability(context.tpm.handle, (C.TSS_FLAG)(capa), (C.uint)(subcaplen), (*C.BYTE)(unsafe.Pointer(&subcap)), &resplen, &resp))
+	return C.GoBytes(unsafe.Pointer(resp), C.int(resplen)), err
+}
