@@ -155,7 +155,8 @@ func (tpm *TPM) GetQuote(aik *Key, pcrs *PCRs, challenge []byte) ([]byte, []byte
 	challangeHash := sha1.Sum(challenge[:])
 
 	validation.ulExternalDataLength = sha1.Size
-	validation.rgbExternalData = (*C.BYTE)(&challangeHash[0])
+	validation.rgbExternalData = (*C.BYTE)(C.CBytes(challangeHash[:]))
+	defer C.free(unsafe.Pointer(validation.rgbExternalData))
 	err := tspiError(C.Tspi_TPM_Quote(tpm.handle, aik.handle, pcrs.handle, &validation))
 
 	if err != nil {
