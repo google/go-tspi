@@ -37,12 +37,11 @@ func pad(plaintext []byte, bsize int) ([]byte, error) {
 }
 
 // AIKChallengeResponse takes the output from GenerateChallenge along with the
-// encrypted AIK key blob. The TPM then decrypts the asymmetric challenge with
-// its EK in order to obtain the AES key, and uses the AES key to decrypt the
-// symmetrically encrypted data. It verifies that this data blob corresponds
-// to the AIK it was given, and if so hands back the secret contained within
-// the symmetrically encrypted data.
-func AIKChallengeResponse(context *tspi.Context, aikblob []byte, asymchallenge []byte, symchallenge []byte) (secret []byte, err error) {
+// AIK. The TPM then decrypts the asymmetric challenge with its EK in order to
+// obtain the AES key, and uses the AES key to decrypt the symmetrically encrypted
+// data. It verifies that this data blob corresponds to the AIK it was given, and
+// if so hands back the secret contained within the symmetrically encrypted data.
+func AIKChallengeResponse(context *tspi.Context, aik *tspi.Key, asymchallenge []byte, symchallenge []byte) (secret []byte, err error) {
 	var wellKnown [20]byte
 
 	srk, err := context.LoadKeyByUUID(tspiconst.TSS_PS_TYPE_SYSTEM, tspi.TSS_UUID_SRK)
@@ -63,10 +62,6 @@ func AIKChallengeResponse(context *tspi.Context, aikblob []byte, asymchallenge [
 	tpm.AssignPolicy(tpmpolicy)
 	tpmpolicy.SetSecret(tspiconst.TSS_SECRET_MODE_SHA1, wellKnown[:])
 
-	aik, err := context.LoadKeyByBlob(srk, aikblob)
-	if err != nil {
-		return nil, err
-	}
 	secret, err = tpm.ActivateIdentity(aik, asymchallenge, symchallenge)
 
 	return secret, err
