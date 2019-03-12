@@ -144,6 +144,44 @@ func CreateAIK(context *tspi.Context) ([]byte, []byte, error) {
 	return pubkey, blob, nil
 }
 
+// GetQuote consumes a nonce and the aik blob and returns the quote,
+// a signature, and any error
+func GetQuote(context *tspi.Context, aikblob, nonce []byte) ([]byte, []byte, error) {
+	srk, err := context.LoadKeyByUUID(tspiconst.TSS_PS_TYPE_SYSTEM, tspi.TSS_UUID_SRK)
+	if err != nil {
+		return nil, nil, fmt.Errorf("LoadKeyByUUID failed: %v", err)
+	}
+	srkpolicy, err := srk.GetPolicy(tspiconst.TSS_POLICY_USAGE)
+	if err != nil {
+		return nil, nil, fmt.Errorf("GetPolicy failed: %v", err)
+	}
+	srkpolicy.SetSecret(tspiconst.TSS_SECRET_MODE_SHA1, wellKnownSecret[:])
+
+	tpm := context.GetTPM()
+
+	aik, err := context.LoadKeyByBlob(srk, aikblob)
+	if err != nil {
+		return nil, nil, fmt.Errorf("LoadKeyByBlob failed: %v", err)
+	}
+
+	pcrs, err := context.CreatePCRs(tspiconst.TSS_PCRS_STRUCT_DEFAULT)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to get a reference to PCRs: %v", err)
+	}
+
+	// GetQuote will only quote the PCR values that are selected by SetPCRs()
+	// We want all the PCR values so we pass a slice of 0 through 23
+	selectedPCRs := make([]int, 24)
+	for i := 0; i < 24; i++ {
+		selectedPCRs[i] = i
+	}
+	if err = pcrs.SetPCRs(selectedPCRs); err != nil {
+		return nil, nil, fmt.Errorf("failed to set the PCR bitmap %v", err)
+	}
+
+	return tpm.GetQuote(aik, pcrs, nonce)
+}
+
 // GetEKCert reads the Endorsement Key certificate from the TPM's NVRAM and
 // returns it, along with any error generated.
 func GetEKCert(context *tspi.Context) (ekcert []byte, err error) {
