@@ -22,6 +22,12 @@ import (
 	"github.com/google/go-tspi/tspiconst"
 )
 
+// This is used for object use authorization
+// We let it be well known because the
+// additional security gained is insignificant
+// compared to the inconveniences it can cause
+var wellKnownSecret [20]byte
+
 func pad(plaintext []byte, bsize int) ([]byte, error) {
 	if bsize >= 256 {
 		return nil, errors.New("bsize must be < 256")
@@ -43,8 +49,6 @@ func pad(plaintext []byte, bsize int) ([]byte, error) {
 // to the AIK it was given, and if so hands back the secret contained within
 // the symmetrically encrypted data.
 func AIKChallengeResponse(context *tspi.Context, aikblob []byte, asymchallenge []byte, symchallenge []byte) (secret []byte, err error) {
-	var wellKnown [20]byte
-
 	srk, err := context.LoadKeyByUUID(tspiconst.TSS_PS_TYPE_SYSTEM, tspi.TSS_UUID_SRK)
 	if err != nil {
 		return nil, err
@@ -53,7 +57,7 @@ func AIKChallengeResponse(context *tspi.Context, aikblob []byte, asymchallenge [
 	if err != nil {
 		return nil, err
 	}
-	srkpolicy.SetSecret(tspiconst.TSS_SECRET_MODE_SHA1, wellKnown[:])
+	srkpolicy.SetSecret(tspiconst.TSS_SECRET_MODE_SHA1, wellKnownSecret[:])
 
 	tpm := context.GetTPM()
 	tpmpolicy, err := context.CreatePolicy(tspiconst.TSS_POLICY_USAGE)
@@ -61,7 +65,7 @@ func AIKChallengeResponse(context *tspi.Context, aikblob []byte, asymchallenge [
 		return nil, err
 	}
 	tpm.AssignPolicy(tpmpolicy)
-	tpmpolicy.SetSecret(tspiconst.TSS_SECRET_MODE_SHA1, wellKnown[:])
+	tpmpolicy.SetSecret(tspiconst.TSS_SECRET_MODE_SHA1, wellKnownSecret[:])
 
 	aik, err := context.LoadKeyByBlob(srk, aikblob)
 	if err != nil {
@@ -76,7 +80,6 @@ func AIKChallengeResponse(context *tspi.Context, aikblob []byte, asymchallenge [
 // the unencrypted public half of the AIK along with an encrypted blob
 // containing both halves of the key, and any error.
 func CreateAIK(context *tspi.Context) ([]byte, []byte, error) {
-	var wellKnown [20]byte
 	n := make([]byte, 2048/8)
 	for i := 0; i < 2048/8; i++ {
 		n[i] = 0xff
@@ -90,7 +93,7 @@ func CreateAIK(context *tspi.Context) ([]byte, []byte, error) {
 	if err != nil {
 		return nil, nil, err
 	}
-	err = keypolicy.SetSecret(tspiconst.TSS_SECRET_MODE_SHA1, wellKnown[:])
+	err = keypolicy.SetSecret(tspiconst.TSS_SECRET_MODE_SHA1, wellKnownSecret[:])
 	if err != nil {
 		return nil, nil, err
 	}
@@ -104,7 +107,7 @@ func CreateAIK(context *tspi.Context) ([]byte, []byte, error) {
 	if err != nil {
 		return nil, nil, err
 	}
-	err = tpmpolicy.SetSecret(tspiconst.TSS_SECRET_MODE_SHA1, wellKnown[:])
+	err = tpmpolicy.SetSecret(tspiconst.TSS_SECRET_MODE_SHA1, wellKnownSecret[:])
 	if err != nil {
 		return nil, nil, err
 	}
@@ -141,10 +144,47 @@ func CreateAIK(context *tspi.Context) ([]byte, []byte, error) {
 	return pubkey, blob, nil
 }
 
+// GetQuote consumes a nonce and the aik blob and returns the quote,
+// a signature, and any error
+func GetQuote(context *tspi.Context, aikblob, nonce []byte) ([]byte, []byte, error) {
+	srk, err := context.LoadKeyByUUID(tspiconst.TSS_PS_TYPE_SYSTEM, tspi.TSS_UUID_SRK)
+	if err != nil {
+		return nil, nil, fmt.Errorf("LoadKeyByUUID failed: %v", err)
+	}
+	srkpolicy, err := srk.GetPolicy(tspiconst.TSS_POLICY_USAGE)
+	if err != nil {
+		return nil, nil, fmt.Errorf("GetPolicy failed: %v", err)
+	}
+	srkpolicy.SetSecret(tspiconst.TSS_SECRET_MODE_SHA1, wellKnownSecret[:])
+
+	tpm := context.GetTPM()
+
+	aik, err := context.LoadKeyByBlob(srk, aikblob)
+	if err != nil {
+		return nil, nil, fmt.Errorf("LoadKeyByBlob failed: %v", err)
+	}
+
+	pcrs, err := context.CreatePCRs(tspiconst.TSS_PCRS_STRUCT_DEFAULT)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to get a reference to PCRs: %v", err)
+	}
+
+	// GetQuote will only quote the PCR values that are selected by SetPCRs()
+	// We want all the PCR values so we pass a slice of 0 through 23
+	selectedPCRs := make([]int, 24)
+	for i := 0; i < 24; i++ {
+		selectedPCRs[i] = i
+	}
+	if err = pcrs.SetPCRs(selectedPCRs); err != nil {
+		return nil, nil, fmt.Errorf("failed to set the PCR bitmap %v", err)
+	}
+
+	return tpm.GetQuote(aik, pcrs, nonce)
+}
+
 // GetEKCert reads the Endorsement Key certificate from the TPM's NVRAM and
 // returns it, along with any error generated.
 func GetEKCert(context *tspi.Context) (ekcert []byte, err error) {
-	var wellKnown [20]byte
 	tpm := context.GetTPM()
 	nv, err := context.CreateNV()
 	if err != nil {
@@ -154,7 +194,7 @@ func GetEKCert(context *tspi.Context) (ekcert []byte, err error) {
 	if err != nil {
 		return nil, err
 	}
-	policy.SetSecret(tspiconst.TSS_SECRET_MODE_SHA1, wellKnown[:])
+	policy.SetSecret(tspiconst.TSS_SECRET_MODE_SHA1, wellKnownSecret[:])
 	nv.SetIndex(0x1000f000)
 	nv.AssignPolicy(policy)
 	data, err := nv.ReadValue(0, 5)
