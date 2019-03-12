@@ -22,13 +22,13 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha1"
-	"crypto/x509"
 	"encoding/binary"
 	"encoding/pem"
 	"errors"
 	"fmt"
 	"math/big"
 
+	"github.com/google/certificate-transparency-go/x509"
 	"github.com/google/go-tspi/tspiconst"
 )
 
@@ -68,11 +68,15 @@ func GenerateChallenge(ekcert []byte, aikpub []byte, secret []byte) (asymenc []b
 	}
 
 	/*
-	 * The EK certificate has an OID for rsaesOaep which will break
-	 * parsing. Replace it with rsaEncryption instead.
+	 * Some EK certificates use RSAES-OAEP public keys.
+	 * This is currently not supported by crypto/x509 but
+	 * we are working with them to find a solution.
+	 * https://github.com/golang/go/issues/30416
 	 */
-	ekcert = bytes.Replace(ekcert, []byte{0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x07}, []byte{0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x01}, 1)
 	cert, err := x509.ParseCertificate(ekcert)
+	if err != nil {
+		return nil, nil, fmt.Errorf("ParseCertificate failed: %v", err)
+	}
 	pubkey := cert.PublicKey.(*rsa.PublicKey)
 
 	asymplain := []byte{0x00, 0x00, 0x00, 0x06, 0x00, 0xff, 0x00, 0x10}
