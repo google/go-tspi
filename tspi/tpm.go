@@ -147,6 +147,24 @@ func (tpm *TPM) ExtendPCR(pcr int, data []byte, eventtype int, event []byte) err
 	return err
 }
 
+// GetPCRValues obtains the PCR values from the TPM.
+func (tpm *TPM) GetPCRValues() ([][]byte, error) {
+	var (
+		buflen C.UINT32
+		buf    *C.BYTE
+		pcrs   [24][]byte
+	)
+	for pcr := 0; pcr < 24; pcr++ {
+		err := tspiError(C.Tspi_TPM_PcrRead(tpm.handle, (C.UINT32)(pcr), &buflen, &buf))
+		if err != nil {
+			return nil, err
+		}
+		pcrs[pcr] = C.GoBytes(unsafe.Pointer(buf), (C.int)(buflen))
+		C.Tspi_Context_FreeMemory(tpm.context, buf)
+	}
+	return pcrs[:], nil
+}
+
 //GetQuote takes an encrypted key blob representing the AIK, a set of PCRs
 //and a challenge and returns a blob containing a hash of the PCR hashes and
 //the challenge, and a validation blob signed by the AIK.
