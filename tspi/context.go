@@ -20,6 +20,8 @@ import "C"
 import (
 	"crypto"
 	"unsafe"
+
+	"github.com/google/go-tspi/tspiconst"
 )
 
 // Context is a TSS context
@@ -141,4 +143,9 @@ func (context *Context) GetCapability(capa int, subcaplen uint, subcap uint8) ([
 	var resp *C.BYTE
 	err := tspiError(C.Tspi_TPM_GetCapability(context.tpm.handle, (C.TSS_FLAG)(capa), (C.uint)(subcaplen), (*C.BYTE)(unsafe.Pointer(&subcap)), &resplen, &resp))
 	return C.GoBytes(unsafe.Pointer(resp), C.int(resplen)), err
+}
+
+// GetManufacturer reads and returns the Unique Vendor ID from the TPM.
+func (context *Context) GetManufacturer() ([]byte, error) {
+	return context.GetCapability(tspiconst.TSS_TPMCAP_PROPERTY, 4, tspiconst.TSS_TPMCAP_PROP_MANUFACTURER)
 }
