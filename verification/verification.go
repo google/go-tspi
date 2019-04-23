@@ -46,14 +46,14 @@ func pad(plaintext []byte, bsize int) ([]byte, error) {
 	return plaintext, nil
 }
 
-// GenerateChallenge takes a copy of the EK certificate, the public half of
+// GenerateChallengeEx takes the EK (rsa.PublicKey), the public half of
 // the AIK to be challenged and a secret. It then symmetrically encrypts the
 // secret with a randomly generated AES key and Asymmetrically encrypts the
 // AES key with the public half of the EK. These can then be provided to the
 // TPM in order to ensure that the AIK is under the control of the TPM. It
 // returns the asymmetrically and symmetrically encrypted data, along with
 // any error.
-func GenerateChallenge(ekcert []byte, aikpub []byte, secret []byte) (asymenc []byte, symenc []byte, err error) {
+func GenerateChallengeEx(pubkey *rsa.PublicKey, aikpub []byte, secret []byte) (asymenc []byte, symenc []byte, err error) {
 	aeskey := make([]byte, 16)
 	iv := make([]byte, 16)
 
@@ -66,18 +66,6 @@ func GenerateChallenge(ekcert []byte, aikpub []byte, secret []byte) (asymenc []b
 	if err != nil {
 		return nil, nil, err
 	}
-
-	/*
-	 * Some EK certificates use RSAES-OAEP public keys.
-	 * This is currently not supported by crypto/x509 but
-	 * we are working with them to find a solution.
-	 * https://github.com/golang/go/issues/30416
-	 */
-	cert, err := x509.ParseCertificate(ekcert)
-	if err != nil {
-		return nil, nil, fmt.Errorf("ParseCertificate failed: %v", err)
-	}
-	pubkey := cert.PublicKey.(*rsa.PublicKey)
 
 	asymplain := []byte{0x00, 0x00, 0x00, 0x06, 0x00, 0xff, 0x00, 0x10}
 	asymplain = append(asymplain, aeskey...)
@@ -138,6 +126,28 @@ func GenerateChallenge(ekcert []byte, aikpub []byte, secret []byte) (asymenc []b
 	symenc = header
 
 	return asymenc, symenc, nil
+}
+
+// GenerateChallenge takes a copy of the EK certificate, the public half of
+// the AIK to be challenged and a secret. It then symmetrically encrypts the
+// secret with a randomly generated AES key and Asymmetrically encrypts the
+// AES key with the public half of the EK. These can then be provided to the
+// TPM in order to ensure that the AIK is under the control of the TPM. It
+// returns the asymmetrically and symmetrically encrypted data, along with
+// any error.
+func GenerateChallenge(ekcert []byte, aikpub []byte, secret []byte) (asymenc []byte, symenc []byte, err error) {
+	/*
+	 * Some EK certificates use RSAES-OAEP public keys.
+	 * This is currently not supported by crypto/x509 but
+	 * we are working with them to find a solution.
+	 * https://github.com/golang/go/issues/30416
+	 */
+	cert, err := x509.ParseCertificate(ekcert)
+	if err != nil {
+		return nil, nil, fmt.Errorf("ParseCertificate failed: %v", err)
+	}
+	pubkey := cert.PublicKey.(*rsa.PublicKey)
+	return GenerateChallengeEx(pubkey, aikpub, secret)
 }
 
 // VerifyEKCert verifies that the provided EK certificate is signed by a
