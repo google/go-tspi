@@ -89,7 +89,7 @@ func (tpm *TPM) GetEventLog() ([]tspiconst.Log, error) {
 	}
 
 	length := count * C.UINT32(unsafe.Sizeof(event))
-	slice := (*[1 << 30]C.TSS_PCR_EVENT)(unsafe.Pointer(events))[:length:length]
+	slice := (*[1 << 26]C.TSS_PCR_EVENT)(unsafe.Pointer(events))[:length:length]
 
 	for i := 0; i < int(count); i++ {
 		var entry tspiconst.Log
