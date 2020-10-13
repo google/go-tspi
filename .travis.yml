@@ -3,7 +3,9 @@ language: go
 go:
   - 1.10.8
   - 1.11.5
-
+arch:
+  - AMD64
+  - ppc64le
 install: true
 
 script:
